@@ -216,6 +216,13 @@ typedef NS_ENUM(NSInteger, IJKSDLGLViewApplicationState) {
     }
 }
 
+- (void)stopGLRendering
+{
+    [self lockGLActive];
+    _didStopGL = YES;
+    [self unlockGLActive];
+}
+
 - (void)dealloc
 {
     [self lockGLActive];
@@ -364,6 +371,9 @@ typedef NS_ENUM(NSInteger, IJKSDLGLViewApplicationState) {
 // NOTE: overlay could be NULl
 - (void)displayInternal: (SDL_VoutOverlay *) overlay
 {
+    if (_didStopGL)
+        return;
+
     if (![self setupRenderer:overlay]) {
         if (!overlay && !_renderer) {
             NSLog(@"IJKSDLGLView: setupDisplay not ready\n");

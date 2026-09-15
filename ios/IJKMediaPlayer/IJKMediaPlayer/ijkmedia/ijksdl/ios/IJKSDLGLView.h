@@ -33,6 +33,12 @@
 - (id) initWithFrame:(CGRect)frame;
 - (void) display: (SDL_VoutOverlay *) overlay;
 
+/// Permanently stops this view from rendering. Sets the internal stop flag synchronously
+/// so any already-queued or future `display:` blocks bail before they touch overlay memory.
+/// Call on the main thread at the start of player shutdown to avoid a use-after-free of the
+/// video overlay while the decoder is being torn down on a background thread.
+- (void) stopGLRendering;
+
 - (UIImage*) snapshot;
 - (void)setShouldLockWhileBeingMovedToWindow:(BOOL)shouldLockWhiteBeingMovedToWindow __attribute__((deprecated("unused")));
 

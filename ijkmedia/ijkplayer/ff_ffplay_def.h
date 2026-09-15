@@ -731,6 +731,11 @@ typedef struct FFPlayer {
     int64_t start_v_dts;
     int64_t start_a_pts;
     int64_t start_a_dts;
+
+    // Keyframe-based recording sync
+    int record_started;           // Recording sync established (keyframe received)
+    int64_t recording_base_pts;   // Shared PTS reference from first keyframe
+    int64_t recording_base_dts;   // Shared DTS reference from first keyframe
 } FFPlayer;
 
 #define fftime_to_milliseconds(ts) (av_rescale(ts, 1000, AV_TIME_BASE))

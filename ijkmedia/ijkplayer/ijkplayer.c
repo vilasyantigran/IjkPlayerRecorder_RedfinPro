@@ -435,10 +435,10 @@ static int ikjmp_chkst_start_l(int mp_state)
     MPST_RET_IF_EQ(mp_state, MP_STATE_IDLE);
     MPST_RET_IF_EQ(mp_state, MP_STATE_INITIALIZED);
     MPST_RET_IF_EQ(mp_state, MP_STATE_ASYNC_PREPARING);
-    // MPST_RET_IF_EQ(mp_state, MP_STATE_PREPARED);
-    // MPST_RET_IF_EQ(mp_state, MP_STATE_STARTED);
-    // MPST_RET_IF_EQ(mp_state, MP_STATE_PAUSED);
-    // MPST_RET_IF_EQ(mp_state, MP_STATE_COMPLETED);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_PREPARED);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_STARTED);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_PAUSED);
+    MPST_RET_IF_EQ(mp_state, MP_STATE_COMPLETED);
     MPST_RET_IF_EQ(mp_state, MP_STATE_STOPPED);
     MPST_RET_IF_EQ(mp_state, MP_STATE_ERROR);
     MPST_RET_IF_EQ(mp_state, MP_STATE_END);

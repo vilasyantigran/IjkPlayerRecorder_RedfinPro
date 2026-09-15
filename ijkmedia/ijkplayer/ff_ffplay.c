@@ -3181,8 +3181,11 @@ int ffp_start_recording_l(FFPlayer *ffp, const char *file_name)
     
     ffp->is_record = 1;
     ffp->record_error = 0;
+    ffp->record_started = 0;
+    ffp->recording_base_pts = AV_NOPTS_VALUE;
+    ffp->recording_base_dts = AV_NOPTS_VALUE;
     pthread_mutex_init(&ffp->record_mutex, NULL);
-    
+
     return 0;
 end:
     ffp->record_error = 1;
@@ -3213,20 +3216,65 @@ int ffp_record_file(FFPlayer *ffp, AVPacket *packet)
         av_new_packet(pkt, 0);
         if (0 == av_packet_ref(pkt, packet)) {
             pthread_mutex_lock(&ffp->record_mutex);
-            if (!ffp->is_first) {
-                ffp->is_first = 1;
-                pkt->pts = 0;
-                pkt->dts = 0;
-            } else {
-                if (pkt->stream_index == AVMEDIA_TYPE_AUDIO) {
-                    pkt->pts = llabs(pkt->pts - ffp->start_a_pts);
-                    pkt->dts = llabs(pkt->dts - ffp->start_a_dts);
-                }
-                else if (pkt->stream_index == AVMEDIA_TYPE_VIDEO) {
-                    pkt->pts = pkt->dts = llabs(pkt->dts - ffp->start_v_dts);
+
+            // Determine packet type using correct stream indices
+            int is_video_pkt = (pkt->stream_index == is->video_stream);
+            int is_audio_pkt = (pkt->stream_index == is->audio_stream);
+
+            // Wait for video keyframe to establish recording base
+            if (!ffp->record_started) {
+                if (is_video_pkt) {
+                    if (pkt->flags & AV_PKT_FLAG_KEY) {
+                        // First keyframe - establish shared timestamp base
+                        ffp->recording_base_pts = pkt->pts;
+                        ffp->recording_base_dts = pkt->dts;
+                        ffp->record_started = 1;
+                        av_log(ffp, AV_LOG_INFO, "Recording started at keyframe, base_pts=%lld, base_dts=%lld\n",
+                               ffp->recording_base_pts, ffp->recording_base_dts);
+                    } else {
+                        // Drop non-keyframe video before sync point
+                        pthread_mutex_unlock(&ffp->record_mutex);
+                        av_packet_unref(pkt);
+                        av_free(pkt);
+                        return 0;
+                    }
+                } else {
+                    // Drop audio until video keyframe establishes base (if video stream exists)
+                    if (is->video_stream >= 0) {
+                        pthread_mutex_unlock(&ffp->record_mutex);
+                        av_packet_unref(pkt);
+                        av_free(pkt);
+                        return 0;
+                    }
+                    // Audio-only stream: use first audio packet as base
+                    ffp->recording_base_pts = pkt->pts;
+                    ffp->recording_base_dts = pkt->dts;
+                    ffp->record_started = 1;
+                    av_log(ffp, AV_LOG_INFO, "Recording started (audio-only), base_pts=%lld, base_dts=%lld\n",
+                           ffp->recording_base_pts, ffp->recording_base_dts);
                 }
             }
-            
+
+            // Adjust timestamps relative to shared base
+            int64_t base_pts = ffp->recording_base_pts;
+            int64_t base_dts = ffp->recording_base_dts;
+
+            if (base_pts != AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
+                pkt->pts = pkt->pts - base_pts;
+            }
+
+            if (base_dts != AV_NOPTS_VALUE && pkt->dts != AV_NOPTS_VALUE) {
+                pkt->dts = pkt->dts - base_dts;
+            }
+
+            // Drop packets with negative DTS (older than recording start)
+            if (pkt->dts != AV_NOPTS_VALUE && pkt->dts < 0) {
+                pthread_mutex_unlock(&ffp->record_mutex);
+                av_packet_unref(pkt);
+                av_free(pkt);
+                return 0;
+            }
+
             in_stream  = is->ic->streams[pkt->stream_index];
             out_stream = ffp->m_ofmt_ctx->streams[pkt->stream_index];
             
@@ -3236,13 +3284,27 @@ int ffp_record_file(FFPlayer *ffp, AVPacket *packet)
             pkt->pos = -1;
             
             if ((ret = av_interleaved_write_frame(ffp->m_ofmt_ctx, pkt)) < 0) {
-                av_log(ffp, AV_LOG_ERROR, "Error muxing packet\n");
+                char errbuf[AV_ERROR_MAX_STRING_SIZE];
+                av_strerror(ret, errbuf, sizeof(errbuf));
+                av_log(ffp, AV_LOG_ERROR, "Error muxing packet: %s\n", errbuf);
+
+                // Only stop on fatal IO errors
+                if (ret == AVERROR(EIO) || ret == AVERROR(ENOSPC)) {
+                    av_packet_unref(pkt);
+                    av_free(pkt);
+                    pthread_mutex_unlock(&ffp->record_mutex);
+                    return ret;
+                }
+                // Non-fatal: reset ret to 0 and continue recording
+                ret = 0;
             }
             
             av_packet_unref(pkt);
+            av_free(pkt);
             pthread_mutex_unlock(&ffp->record_mutex);
         } else {
-            av_log(ffp, AV_LOG_ERROR, "av_packet_ref == NULL");
+            av_log(ffp, AV_LOG_ERROR, "av_packet_ref failed\n");
+            av_free(pkt);
         }
     }
     return ret;
@@ -3261,10 +3323,11 @@ int ffp_stop_recording_l(FFPlayer *ffp){
             avformat_free_context(ffp->m_ofmt_ctx);
             ffp->m_ofmt_ctx = NULL;
             ffp->is_first = 0;
+            ffp->record_started = 0;
         }
         pthread_mutex_unlock(&ffp->record_mutex);
         pthread_mutex_destroy(&ffp->record_mutex);
-        av_log(ffp, AV_LOG_DEBUG, "stopRecord ok\n");
+        av_log(ffp, AV_LOG_INFO, "Recording stopped successfully\n");
     } else {
         av_log(ffp, AV_LOG_ERROR, "don't need stopRecord\n");
     }
@@ -3589,18 +3652,8 @@ static int read_thread(void *arg)
     }
 
     for (;;) {
-        if (!ffp->is_first && pkt->pts == pkt->dts) {
-            if (pkt->stream_index == AVMEDIA_TYPE_AUDIO) {
-                ffp->start_a_pts = pkt->pts;
-                ffp->start_a_dts = pkt->dts;
-            }
-        }
-        if (pkt->stream_index == AVMEDIA_TYPE_VIDEO) {
-            if (!ffp->is_first) {
-                ffp->start_v_pts = pkt->pts;
-                ffp->start_v_dts = pkt->dts;
-            }
-        }
+        // NOTE: Removed flawed timestamp capture block that used AVMEDIA_TYPE_* comparisons.
+        // Timestamp base is now established in ffp_record_file() at first keyframe.
 
         if (ffp->is_record) {
             if (0 != ffp_record_file(ffp, pkt)) {

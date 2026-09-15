@@ -63,6 +63,12 @@ function pull_fork() {
     sh $TOOLS/pull-repo-ref.sh $IJK_FFMPEG_FORK ios/ffmpeg-$1 ${IJK_FFMPEG_LOCAL_REPO}
     cd ios/ffmpeg-$1
     git checkout ${IJK_FFMPEG_COMMIT} -B ijkplayer
+    FFMPEG_PATCH=../../patches/ffmpeg-ios-h264dsp-ptrdiff.patch
+    if git apply --reverse --check "$FFMPEG_PATCH" >/dev/null 2>&1; then
+        echo "== ffmpeg patch already applied =="
+    else
+        git apply "$FFMPEG_PATCH"
+    fi
     cd -
 }
 
@@ -93,4 +99,3 @@ case "$FF_TARGET" in
 esac
 
 sync_ff_version
-

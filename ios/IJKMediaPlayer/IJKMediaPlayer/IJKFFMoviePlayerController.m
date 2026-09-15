@@ -578,6 +578,12 @@ inline static int getPlayerOption(IJKFFOptionCategory category)
     if (!_mediaPlayer)
         return;
 
+    // Synchronously stop GL rendering before the background teardown frees the decoder/vout
+    // overlays. Otherwise a display: block already queued on the main thread can render a
+    // freed overlay (use-after-free → SIGSEGV in yuv420p_getBufferWidth) during player
+    // recreation/auto-recovery. shutdown is always called on the main thread here.
+    [_glView stopGLRendering];
+
     [self stopHudTimer];
     [self unregisterApplicationObservers];
     [self setScreenOn:NO];
