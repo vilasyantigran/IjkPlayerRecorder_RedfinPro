@@ -18,10 +18,7 @@ Build them first:
   ./init-ios.sh
   cd ios
   ./compile-ffmpeg.sh clean
-  ./compile-ffmpeg.sh arm64
-  FF_LIPO_ARCHS="arm64" FF_LIPO_OUTPUT=universal ./compile-ffmpeg.sh lipo
-  ./compile-ffmpeg.sh arm64-simulator
-  FF_LIPO_ARCHS="arm64-simulator" FF_LIPO_OUTPUT=simulator ./compile-ffmpeg.sh lipo
+  ./compile-ffmpeg.sh all
 MESSAGE
   exit 1
 fi

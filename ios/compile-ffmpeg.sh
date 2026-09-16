@@ -123,10 +123,18 @@ do_lipo_all () {
 if [ "$FF_TARGET" = "armv7" -o "$FF_TARGET" = "armv7s" -o "$FF_TARGET" = "arm64" -o "$FF_TARGET" = "arm64-simulator" ]; then
     echo_archs
     sh tools/do-compile-ffmpeg.sh $FF_TARGET $FF_TARGET_EXTRA
+    FF_LIPO_ARCHS=$FF_TARGET
+    if [ "$FF_TARGET" = "arm64-simulator" ]; then
+        FF_LIPO_OUTPUT=simulator
+    else
+        FF_LIPO_OUTPUT=universal
+    fi
     do_lipo_all
 elif [ "$FF_TARGET" = "i386" -o "$FF_TARGET" = "x86_64" ]; then
     echo_archs
     sh tools/do-compile-ffmpeg.sh $FF_TARGET $FF_TARGET_EXTRA
+    FF_LIPO_ARCHS=$FF_TARGET
+    FF_LIPO_OUTPUT=simulator
     do_lipo_all
 elif [ "$FF_TARGET" = "lipo" ]; then
     echo_archs
@@ -138,6 +146,12 @@ elif [ "$FF_TARGET" = "all" ]; then
         sh tools/do-compile-ffmpeg.sh $ARCH $FF_TARGET_EXTRA
     done
 
+    FF_LIPO_ARCHS="arm64"
+    FF_LIPO_OUTPUT=universal
+    do_lipo_all
+
+    FF_LIPO_ARCHS="arm64-simulator"
+    FF_LIPO_OUTPUT=simulator
     do_lipo_all
 elif [ "$FF_TARGET" = "check" ]; then
     echo_archs
