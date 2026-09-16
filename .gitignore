@@ -1,5 +1,7 @@
 # -----
 build/
+.build/
+dist/
 ffmpeg-temp/
 android/ffmpeg-*
 android/openssl-*
@@ -40,4 +42,3 @@ build/
 xcuserdata
 xcshareddata
 *.xccheckout
-

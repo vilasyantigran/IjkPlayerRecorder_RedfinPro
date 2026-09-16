@@ -152,6 +152,12 @@ cd ios
 ./compile-ffmpeg.sh clean
 ./compile-ffmpeg.sh all
 
+# Swift Package binary release
+#     From the repository root:
+#         sh scripts/build-xcframework.sh
+#     Upload dist/IJKMediaFramework.xcframework.zip to the GitHub release used by Package.swift.
+#     If the zip changes, update the checksum in Package.swift with the value printed by the script.
+#
 # Demo
 #     open ios/IJKMediaDemo/IJKMediaDemo.xcodeproj with Xcode
 # 
