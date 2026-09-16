@@ -9,15 +9,14 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "IJKMediaFramework",
-            targets: ["IJKMediaFramework"]
+            name: "IjkPlayerRecorderSource",
+            targets: ["IjkPlayerRecorderSource"]
         )
     ],
     targets: [
-        .binaryTarget(
-            name: "IJKMediaFramework",
-            url: "https://github.com/vilasyantigran/IjkPlayerRecorder_RedfinPro/releases/download/redfinpro-ijk-0.1.0/IJKMediaFramework.xcframework.zip",
-            checksum: "356efcb431f602f44533061fef24cec376deecdceb59b3ec8adccdffcf4ef9ba"
+        .target(
+            name: "IjkPlayerRecorderSource",
+            path: "Sources/IjkPlayerRecorderSource"
         )
     ]
 )

@@ -61,17 +61,11 @@ xcodebuild build \
   SYMROOT="$BUILD_ROOT/sym-sim" \
   OBJROOT="$BUILD_ROOT/obj-sim"
 
-rm -rf "$BUILD_ROOT/$FRAMEWORK_NAME.xcframework" "$DIST_DIR/$FRAMEWORK_NAME.xcframework.zip"
+rm -rf "$DIST_DIR/$FRAMEWORK_NAME.xcframework"
 
 xcodebuild -create-xcframework \
   -framework "$BUILD_ROOT/build-iphoneos/$FRAMEWORK_NAME.framework" \
   -framework "$BUILD_ROOT/build-iphonesimulator/$FRAMEWORK_NAME.framework" \
-  -output "$BUILD_ROOT/$FRAMEWORK_NAME.xcframework"
+  -output "$DIST_DIR/$FRAMEWORK_NAME.xcframework"
 
-ditto -c -k --sequesterRsrc --keepParent \
-  "$BUILD_ROOT/$FRAMEWORK_NAME.xcframework" \
-  "$DIST_DIR/$FRAMEWORK_NAME.xcframework.zip"
-
-echo "Created: $DIST_DIR/$FRAMEWORK_NAME.xcframework.zip"
-echo "Checksum:"
-swift package compute-checksum "$DIST_DIR/$FRAMEWORK_NAME.xcframework.zip"
+echo "Created: $DIST_DIR/$FRAMEWORK_NAME.xcframework"

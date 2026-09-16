@@ -152,11 +152,17 @@ cd ios
 ./compile-ffmpeg.sh clean
 ./compile-ffmpeg.sh all
 
-# Swift Package binary release
+# SwiftPM source package
+#     This repository includes a small SwiftPM marker target so Xcode can fetch
+#     the fork as source without a binary artifact. The real player is still
+#     built manually from ios/IJKMediaPlayer/IJKMediaPlayer.xcodeproj after
+#     running the FFmpeg build commands above.
+#
+# Optional local XCFramework
 #     From the repository root:
 #         sh scripts/build-xcframework.sh
-#     Upload dist/IJKMediaFramework.xcframework.zip to the GitHub release used by Package.swift.
-#     If the zip changes, update the checksum in Package.swift with the value printed by the script.
+#     The script creates dist/IJKMediaFramework.xcframework for local/manual use.
+#     This repository is source-based; it does not publish a SwiftPM binary artifact.
 #
 # Demo
 #     open ios/IJKMediaDemo/IJKMediaDemo.xcodeproj with Xcode
