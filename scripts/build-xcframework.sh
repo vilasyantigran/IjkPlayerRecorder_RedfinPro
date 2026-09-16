@@ -8,16 +8,20 @@ FRAMEWORK_NAME="IJKMediaFramework"
 BUILD_ROOT="${BUILD_ROOT:-$REPO_ROOT/.build/xcframework}"
 DIST_DIR="${DIST_DIR:-$REPO_ROOT/dist}"
 
-FFMPEG_LIB="$REPO_ROOT/ios/build/universal/lib/libavcodec.a"
-if [[ ! -f "$FFMPEG_LIB" ]]; then
+DEVICE_FFMPEG_LIB="$REPO_ROOT/ios/build/universal/lib/libavcodec.a"
+SIMULATOR_FFMPEG_LIB="$REPO_ROOT/ios/build/simulator/lib/libavcodec.a"
+if [[ ! -f "$DEVICE_FFMPEG_LIB" || ! -f "$SIMULATOR_FFMPEG_LIB" ]]; then
   cat <<'MESSAGE' >&2
-Missing ios/build/universal FFmpeg libraries.
+Missing FFmpeg libraries.
 
 Build them first:
   ./init-ios.sh
   cd ios
   ./compile-ffmpeg.sh clean
-  ./compile-ffmpeg.sh all
+  ./compile-ffmpeg.sh arm64
+  FF_LIPO_ARCHS="arm64" FF_LIPO_OUTPUT=universal ./compile-ffmpeg.sh lipo
+  ./compile-ffmpeg.sh arm64-simulator
+  FF_LIPO_ARCHS="arm64-simulator" FF_LIPO_OUTPUT=simulator ./compile-ffmpeg.sh lipo
 MESSAGE
   exit 1
 fi
@@ -50,8 +54,8 @@ xcodebuild build \
   -sdk iphonesimulator \
   -destination "generic/platform=iOS Simulator" \
   -derivedDataPath "$BUILD_ROOT/derived-sim" \
-  ARCHS=x86_64 \
-  VALID_ARCHS=x86_64 \
+  ARCHS=arm64 \
+  VALID_ARCHS=arm64 \
   ONLY_ACTIVE_ARCH=NO \
   SKIP_INSTALL=NO \
   BUILD_LIBRARY_FOR_DISTRIBUTION=YES \

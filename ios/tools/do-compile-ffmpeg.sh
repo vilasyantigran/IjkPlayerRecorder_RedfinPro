@@ -35,6 +35,7 @@ set -e
 #--------------------
 # common defines
 FF_ARCH=$1
+FF_XCRUN_ARCH=$FF_ARCH
 FF_BUILD_OPT=$2
 echo "FF_ARCH=$FF_ARCH"
 echo "FF_BUILD_OPT=$FF_BUILD_OPT"
@@ -155,9 +156,21 @@ elif [ "$FF_ARCH" = "arm64" ]; then
     FF_XCODE_BITCODE="-fembed-bitcode"
     FFMPEG_CFG_FLAGS="$FFMPEG_CFG_FLAGS $FFMPEG_CFG_FLAGS_ARM"
     FF_GASPP_EXPORT="GASPP_FIX_XCODE5=1"
+elif [ "$FF_ARCH" = "arm64-simulator" ]; then
+    FF_BUILD_NAME="ffmpeg-arm64-simulator"
+    FF_BUILD_NAME_OPENSSL=openssl-arm64-simulator
+    FF_XCRUN_ARCH="arm64"
+    FF_XCRUN_PLATFORM="iPhoneSimulator"
+    FF_XCRUN_OSVERSION="-mios-simulator-version-min=12.0"
+    FFMPEG_CFG_FLAGS="$FFMPEG_CFG_FLAGS $FFMPEG_CFG_FLAGS_ARM"
+    FF_GASPP_EXPORT="GASPP_FIX_XCODE5=1"
 else
     echo "unknown architecture $FF_ARCH";
     exit 1
+fi
+
+if [ "$FF_XCRUN_ARCH" != "$FF_ARCH" ]; then
+    FFMPEG_CFG_FLAGS=${FFMPEG_CFG_FLAGS/--arch=$FF_ARCH/--arch=$FF_XCRUN_ARCH}
 fi
 
 echo "build_name: $FF_BUILD_NAME"
@@ -189,7 +202,7 @@ FF_XCRUN_CC="xcrun -sdk $FF_XCRUN_SDK clang"
 FFMPEG_CFG_FLAGS="$FFMPEG_CFG_FLAGS $FFMPEG_CFG_CPU"
 
 FFMPEG_CFLAGS=
-FFMPEG_CFLAGS="$FFMPEG_CFLAGS -arch $FF_ARCH"
+FFMPEG_CFLAGS="$FFMPEG_CFLAGS -arch $FF_XCRUN_ARCH"
 FFMPEG_CFLAGS="$FFMPEG_CFLAGS $FF_XCRUN_OSVERSION"
 FFMPEG_CFLAGS="$FFMPEG_CFLAGS $FFMPEG_EXTRA_CFLAGS"
 FFMPEG_CFLAGS="$FFMPEG_CFLAGS $FF_XCODE_BITCODE"
